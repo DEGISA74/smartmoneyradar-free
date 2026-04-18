@@ -8,6 +8,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # ────────────────────────────────────────────────────────────────────
 # SAYFA AYARLARI
@@ -404,6 +406,100 @@ def _locked(*features) -> str:
 
 
 # ────────────────────────────────────────────────────────────────────
+# GRAFİKLER — FİYAT + STP & RSI
+# ────────────────────────────────────────────────────────────────────
+def render_grafikler(df: pd.DataFrame):
+    last30 = df.tail(30).copy()
+    c30    = last30["Close"]
+
+    # STP: tüm veriyle hesapla, son 30 günü göster
+    h50  = df["High"].rolling(50).max()
+    l50  = df["Low"].rolling(50).min()
+    stp  = ((h50 + l50) / 2).reindex(last30.index)
+
+    # RSI
+    rsi30 = calc_rsi(df["Close"]).reindex(last30.index)
+
+    cur_price = float(c30.iloc[-1])
+    stp_val   = float(stp.iloc[-1])
+    above_stp = cur_price > stp_val
+    fill_col  = "rgba(16,185,129,0.10)" if above_stp else "rgba(239,68,68,0.10)"
+    rsi_val   = float(rsi30.iloc[-1])
+    rsi_col   = "#ef4444" if rsi_val > 70 else ("#10b981" if rsi_val < 30 else "#6366f1")
+
+    fig = make_subplots(
+        rows=2, cols=1,
+        shared_xaxes=True,
+        row_heights=[0.65, 0.35],
+        vertical_spacing=0.06,
+        subplot_titles=["📈 Fiyat & STP Denge Çizgisi (Son 30 Gün)", "📊 RSI (14)"]
+    )
+
+    # ── Fiyat ──
+    fig.add_trace(go.Scatter(
+        x=last30.index, y=stp,
+        name="STP Dengesi",
+        line=dict(color="#f59e0b", width=1.5, dash="dash"),
+        hovertemplate="%{y:,.2f}<extra>STP</extra>"
+    ), row=1, col=1)
+
+    fig.add_trace(go.Scatter(
+        x=last30.index, y=c30,
+        name="Fiyat",
+        line=dict(color="#6366f1", width=2),
+        fill="tonexty", fillcolor=fill_col,
+        hovertemplate="%{y:,.2f}<extra>Fiyat</extra>"
+    ), row=1, col=1)
+
+    # ── RSI bantları ──
+    fig.add_hrect(y0=70, y1=100, row=2, col=1,
+                  fillcolor="rgba(239,68,68,0.06)", line_width=0)
+    fig.add_hrect(y0=0, y1=30, row=2, col=1,
+                  fillcolor="rgba(16,185,129,0.06)", line_width=0)
+    for lvl, col, dash in [(70,"#ef4444","dash"),(50,"#94a3b8","dot"),(30,"#10b981","dash")]:
+        fig.add_hline(y=lvl, row=2, col=1,
+                      line_dash=dash, line_color=col, line_width=1)
+
+    fig.add_trace(go.Scatter(
+        x=last30.index, y=rsi30,
+        name="RSI",
+        line=dict(color=rsi_col, width=2),
+        fill="tozeroy", fillcolor="rgba(99,102,241,0.06)",
+        hovertemplate="%{y:.1f}<extra>RSI</extra>"
+    ), row=2, col=1)
+
+    fig.update_layout(
+        height=420,
+        margin=dict(l=0, r=0, t=40, b=0),
+        paper_bgcolor="white",
+        plot_bgcolor="#f8fafc",
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.04,
+                    font=dict(size=10, color="#475569")),
+        hovermode="x unified",
+        font=dict(family="Inter, sans-serif", color="#475569"),
+    )
+    fig.update_xaxes(showgrid=False, tickfont=dict(size=9))
+    fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", tickfont=dict(size=9))
+    fig.update_yaxes(range=[0, 100], row=2, col=1)
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+    # Premium CTA
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);'
+        'border:1px solid #a5b4fc;border-radius:10px;padding:10px 16px;'
+        'text-align:center;margin-bottom:20px;">'
+        '<span style="font-size:0.78rem;color:#4338ca;font-weight:600;">'
+        '💎 Premium\'da: İnteraktif ICT Mum Grafiği · VWAP Bantları · '
+        'Fibonacci Seviyeleri · Arz-Talep Bölgeleri · 500+ BIST Hissesi · '
+        '<a href="https://smartmoneyradar.app" style="color:#6366f1;font-weight:800;'
+        'text-decoration:none;">smartmoneyradar.app →</a></span></div>',
+        unsafe_allow_html=True
+    )
+
+
+# ────────────────────────────────────────────────────────────────────
 # UI — GİRİŞ EKRANI
 # ────────────────────────────────────────────────────────────────────
 def render_login():
@@ -688,6 +784,9 @@ def render_main():
         f'</div>',
         unsafe_allow_html=True
     )
+
+    # Grafikler
+    render_grafikler(df)
 
     # Analizleri hesapla
     radar_data   = analyze_long_radar(df)
