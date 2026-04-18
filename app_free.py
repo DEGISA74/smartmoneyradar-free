@@ -558,10 +558,14 @@ def render_premium_tablo():
         'padding:5px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:2px;">'
         '<span style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Özellik</span>'
         '<div style="display:flex;gap:20px;min-width:90px;justify-content:center;">'
-        '<span style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Ücretsiz</span>'
-        '<span style="font-size:0.65rem;font-weight:700;color:#6366f1;text-transform:uppercase;">Premium</span>'
+        '<span style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">%10</span>'
+        '<span style="font-size:0.65rem;font-weight:700;color:#6366f1;text-transform:uppercase;">%100</span>'
         '</div></div>'
         + rows_html +
+        # "Ve çok daha fazlası" satırı
+        '<div style="text-align:center;padding:7px 8px;font-size:0.75rem;'
+        'font-weight:800;color:#6366f1;letter-spacing:0.3px;border-bottom:1px solid #f1f5f9;">'
+        '✨ Ve çok daha fazlası...</div>'
         # Alt CTA
         '<div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);'
         'border-radius:8px;padding:10px 12px;margin-top:12px;text-align:center;">'
