@@ -605,6 +605,22 @@ def render_login():
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         if st.button("📡  Ücretsiz Erişim Al", use_container_width=True):
             if name and email and "@" in email:
+                # Supabase'e kaydet
+                try:
+                    import requests as _req
+                    _req.post(
+                        "https://bzzdviatkawrguwoxqnp.supabase.co/rest/v1/users",
+                        headers={
+                            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6emR2aWF0a2F3cmd1d294cW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjY5MDcsImV4cCI6MjA5MjA0MjkwN30.TdnoZDRruInxCaRWBfE0xz-w2L1bFaiXBDDjQgz2g9c",
+                            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6emR2aWF0a2F3cmd1d294cW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjY5MDcsImV4cCI6MjA5MjA0MjkwN30.TdnoZDRruInxCaRWBfE0xz-w2L1bFaiXBDDjQgz2g9c",
+                            "Content-Type": "application/json",
+                            "Prefer": "return=minimal"
+                        },
+                        json={"email": email, "name": name},
+                        timeout=5
+                    )
+                except Exception:
+                    pass  # Kayıt başarısız olsa bile kullanıcı içeri girsin
                 st.session_state["logged_in"]  = True
                 st.session_state["user_name"]  = name
                 st.session_state["user_email"] = email
