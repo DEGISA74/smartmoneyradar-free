@@ -120,7 +120,14 @@ def _try_binance(ticker: str, limit: int = 500):
     return None
 
 def _try_coingecko(ticker: str):
-    coin_map = {"BTC-USD": "bitcoin", "ETH-USD": "ethereum"}
+    coin_map = {
+        "BTC-USD":  "bitcoin",
+        "ETH-USD":  "ethereum",
+        "SOL-USD":  "solana",
+        "XRP-USD":  "ripple",
+        "DOGE-USD": "dogecoin",
+        "AVAX-USD": "avalanche-2",
+    }
     coin_id  = coin_map.get(ticker.upper())
     if not coin_id:
         return None
@@ -846,14 +853,21 @@ def render_main():
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # BTC / ETH seçici
-    c1, c2, c3 = st.columns([1, 1, 5])
-    with c1:
-        if st.button("₿  Bitcoin", use_container_width=True):
-            st.session_state["ticker"] = "BTC-USD"; st.rerun()
-    with c2:
-        if st.button("⟠  Ethereum", use_container_width=True):
-            st.session_state["ticker"] = "ETH-USD"; st.rerun()
+    # Kripto seçici
+    coins = [
+        ("₿ BTC",  "BTC-USD"),
+        ("⟠ ETH",  "ETH-USD"),
+        ("◎ SOL",  "SOL-USD"),
+        ("✕ XRP",  "XRP-USD"),
+        ("Ð DOGE", "DOGE-USD"),
+        ("▲ AVAX", "AVAX-USD"),
+    ]
+    btn_cols = st.columns(len(coins))
+    for col, (label, t) in zip(btn_cols, coins):
+        with col:
+            active = ticker == t
+            if st.button(label, use_container_width=True, type="primary" if active else "secondary"):
+                st.session_state["ticker"] = t; st.rerun()
 
     # Veri çek
     with st.spinner(f"{ticker} verisi alınıyor..."):
@@ -868,8 +882,15 @@ def render_main():
     change = ((cur - prev) / prev) * 100
     chg_col  = "#10b981" if change >= 0 else "#ef4444"
     chg_icon = "▲" if change >= 0 else "▼"
-    coin_name = "Bitcoin" if "BTC" in ticker else "Ethereum"
-    coin_icon = "₿" if "BTC" in ticker else "⟠"
+    coin_info = {
+        "BTC-USD":  ("Bitcoin",  "₿"),
+        "ETH-USD":  ("Ethereum", "⟠"),
+        "SOL-USD":  ("Solana",   "◎"),
+        "XRP-USD":  ("XRP",      "✕"),
+        "DOGE-USD": ("Dogecoin", "Ð"),
+        "AVAX-USD": ("Avalanche","▲"),
+    }
+    coin_name, coin_icon = coin_info.get(ticker, ("Kripto", "🪙"))
 
     st.markdown(
         f'<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin:12px 0 20px;">'
