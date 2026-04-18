@@ -142,6 +142,9 @@ def _try_yfinance(ticker: str):
             return None
         if df.index.tz is not None:
             df.index = df.index.tz_localize(None)
+        # yfinance bazen MultiIndex kolon döndürür — düzleştir
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
         return df[["Open","High","Low","Close","Volume"]].dropna()
     except Exception:
         return None
