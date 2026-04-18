@@ -788,9 +788,6 @@ def render_main():
         unsafe_allow_html=True
     )
 
-    # Grafikler
-    render_grafikler(df)
-
     # Analizleri hesapla
     radar_data   = analyze_long_radar(df)
     para_data    = analyze_para_akisi(df)
@@ -799,10 +796,16 @@ def render_main():
     sinyal_data  = analyze_canli_sinyaller(df)
     yol_data     = analyze_yol_haritasi(df)
 
-    # 2 kolonlu layout
+    # ── ÜST BÖLÜM: Grafik (70%) + Long Radar (30%) ──
+    col_chart, col_radar = st.columns([7, 3], gap="medium")
+    with col_chart:
+        render_grafikler(df)
+    with col_radar:
+        render_long_radar(radar_data)
+
+    # ── ALT BÖLÜM: 2 eşit kolon ──
     left, right = st.columns(2, gap="medium")
     with left:
-        render_long_radar(radar_data)
         render_para_akisi(para_data)
         render_teknik_gorunum(gorunum_data)
     with right:
