@@ -551,7 +551,7 @@ def render_premium_tablo():
         '<div class="smr-header" style="color:#6366f1;">🚀 Ücretsiz mi? Premium mu?</div>'
         '<div style="font-size:0.73rem;color:#475569;margin-bottom:10px;line-height:1.5;">'
         'Grafik çizmeye, indikatör kontrol etmeye son. Patron Terminal algoritması '
-        '<b>tüm piyasayı saniyeler içinde tarar</b> — sen sadece kaymağı yersin.'
+        '<b>tüm piyasayı saniyeler içinde tarar</b> — sen sadece izlersin ve kazancına odaklanırsın.'
         '</div>'
         # Tablo başlığı
         '<div style="display:flex;justify-content:space-between;align-items:center;'
