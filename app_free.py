@@ -8,6 +8,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
+# yfinance ve coingecko fallback için — lazy import (_try_yfinance içinde)
 
 # ────────────────────────────────────────────────────────────────────
 # SAYFA AYARLARI
@@ -64,32 +65,96 @@ hr { border-color: #21262d !important; margin: 0.8rem 0 !important; }
 
 
 # ────────────────────────────────────────────────────────────────────
-# VERİ KATMANI — BİNANCE API
+# VERİ KATMANI — BİNANCE (çoklu endpoint) + yfinance + CoinGecko
 # ────────────────────────────────────────────────────────────────────
-def _binance_fetch(ticker: str, limit: int = 500):
+_BINANCE_HOSTS = [
+    "api.binance.com",
+    "api1.binance.com",
+    "api2.binance.com",
+    "api3.binance.com",
+]
+
+def _parse_binance_klines(data):
+    cols = ["ts","Open","High","Low","Close","Volume",
+            "ct","qv","n","tbb","tbq","ig"]
+    df = pd.DataFrame(data, columns=cols)
+    for c in ["Open","High","Low","Close","Volume"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    df["Date"] = pd.to_datetime(df["ts"], unit="ms")
+    df.set_index("Date", inplace=True)
+    df.index = df.index.tz_localize(None)
+    return df[["Open","High","Low","Close","Volume"]].dropna()
+
+def _try_binance(ticker: str, limit: int = 500):
     symbol = ticker.replace("-USD", "USDT").upper()
-    url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1d&limit={limit}"
+    for host in _BINANCE_HOSTS:
+        url = f"https://{host}/api/v3/klines?symbol={symbol}&interval=1d&limit={limit}"
+        try:
+            resp = requests.get(url, timeout=8)
+            data = resp.json()
+            if isinstance(data, dict) and "code" in data:
+                continue
+            if not data:
+                continue
+            df = _parse_binance_klines(data)
+            if len(df) > 50:
+                return df
+        except Exception:
+            continue
+    return None
+
+def _try_coingecko(ticker: str):
+    coin_map = {"BTC-USD": "bitcoin", "ETH-USD": "ethereum"}
+    coin_id  = coin_map.get(ticker.upper())
+    if not coin_id:
+        return None
     try:
-        resp = requests.get(url, timeout=8)
-        data = resp.json()
-        if isinstance(data, dict) and "code" in data:
+        # OHLC (365 gün)
+        ohlc_url = (f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+                    f"/ohlc?vs_currency=usd&days=365")
+        ohlc = requests.get(ohlc_url, timeout=12).json()
+        # Hacim ayrı endpoint'ten
+        vol_url  = (f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+                    f"/market_chart?vs_currency=usd&days=365&interval=daily")
+        vol_data = requests.get(vol_url, timeout=12).json()
+
+        odf = pd.DataFrame(ohlc, columns=["ts","Open","High","Low","Close"])
+        odf["Date"] = pd.to_datetime(odf["ts"], unit="ms").dt.normalize()
+        odf.set_index("Date", inplace=True)
+
+        vdf = pd.DataFrame(vol_data["total_volumes"], columns=["ts","Volume"])
+        vdf["Date"] = pd.to_datetime(vdf["ts"], unit="ms").dt.normalize()
+        vdf.set_index("Date", inplace=True)
+
+        df = odf.join(vdf[["Volume"]], how="left")
+        df["Volume"] = df["Volume"].fillna(0)
+        df = df[["Open","High","Low","Close","Volume"]].dropna(subset=["Close"])
+        return df if len(df) > 50 else None
+    except Exception:
+        return None
+
+def _try_yfinance(ticker: str):
+    try:
+        import yfinance as yf
+        df = yf.download(ticker, period="2y", interval="1d",
+                         progress=False, auto_adjust=True)
+        if df is None or len(df) < 50:
             return None
-        cols = ["ts","Open","High","Low","Close","Volume",
-                "ct","qv","n","tbb","tbq","ig"]
-        df = pd.DataFrame(data, columns=cols)
-        for c in ["Open","High","Low","Close","Volume"]:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
-        df["Date"] = pd.to_datetime(df["ts"], unit="ms")
-        df.set_index("Date", inplace=True)
-        df.index = df.index.tz_localize(None)
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
         return df[["Open","High","Low","Close","Volume"]].dropna()
     except Exception:
         return None
 
-
 @st.cache_data(ttl=300)
 def get_data(ticker: str):
-    return _binance_fetch(ticker)
+    df = _try_binance(ticker)
+    if df is not None:
+        return df
+    df = _try_yfinance(ticker)
+    if df is not None:
+        return df
+    return _try_coingecko(ticker)
 
 
 # ────────────────────────────────────────────────────────────────────
