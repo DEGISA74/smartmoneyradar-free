@@ -245,6 +245,12 @@ def analyze_long_radar(df):
         return {"score": 0, "status": "Hesaplanamadı", "status_col": "#64748b", "criteria": {}}
 
 
+def _calc_stp(df):
+    """Gerçek STP: Typical Price (HLC/3) üzerinden EWM span=6 (app.py ile aynı)"""
+    tp   = (df["High"] + df["Low"] + df["Close"]) / 3
+    ema1 = tp.ewm(span=6, adjust=False).mean()
+    return ema1
+
 def analyze_para_akisi(df):
     try:
         c = df["Close"]; v = df["Volume"]
@@ -256,9 +262,8 @@ def analyze_para_akisi(df):
         elif fi_val > 0:                       fi_s, fi_c = "Alım Baskısı (zayıflıyor)", "#16a34a"
         elif fi_val < 0 and fi_val < fi_prev:  fi_s, fi_c = "Güçlenen Satış Baskısı",    "#ef4444"
         else:                                  fi_s, fi_c = "Satış Baskısı (azalıyor)",  "#dc2626"
-        h50 = float(df["High"].rolling(50).max().iloc[-1])
-        l50 = float(df["Low"].rolling(50).min().iloc[-1])
-        stp = (h50 + l50) / 2; cur = float(c.iloc[-1])
+        stp_series = _calc_stp(df)
+        stp = float(stp_series.iloc[-1]); cur = float(c.iloc[-1])
         sap = ((cur - stp) / stp) * 100
         if sap > 15:    stp_s, stp_c = "Dengenin çok üzerinde — Isınma var", "#ef4444"
         elif sap > 5:   stp_s, stp_c = "Dengenin üzerinde",                  "#f59e0b"
@@ -412,10 +417,8 @@ def render_grafikler(df: pd.DataFrame):
     last30 = df.tail(30).copy()
     c30    = last30["Close"]
 
-    # STP: tüm veriyle hesapla, son 30 günü göster
-    h50  = df["High"].rolling(50).max()
-    l50  = df["Low"].rolling(50).min()
-    stp  = ((h50 + l50) / 2).reindex(last30.index)
+    # STP: gerçek formül — Typical Price EWM span=6 (app.py ile aynı)
+    stp  = _calc_stp(df).reindex(last30.index)
 
     # RSI
     rsi30 = calc_rsi(df["Close"]).reindex(last30.index)
