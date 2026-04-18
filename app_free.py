@@ -404,8 +404,10 @@ def _locked(*features) -> str:
         '<div class="premium-box">'
         '<div class="premium-box-title">💎 Premium\'da Açık</div>'
         f'{pills}'
-        '<a class="premium-link" href="https://smartmoneyradar.app" target="_blank">'
-        'Tüm özelliklere eriş → smartmoneyradar.app</a>'
+        '<div style="text-align:center;margin-top:8px;">'
+        '<span style="font-size:0.75rem;font-weight:700;color:#4338ca;">🔜 smartmoneyradar.app</span>'
+        '<span style="font-size:0.70rem;color:#94a3b8;margin-left:6px;">— Çok Yakında</span>'
+        '</div>'
         '</div>'
     )
 
@@ -496,8 +498,8 @@ def render_grafikler(df: pd.DataFrame):
         '<span style="font-size:0.78rem;color:#4338ca;font-weight:600;">'
         '💎 Premium\'da: İnteraktif ICT Mum Grafiği · VWAP Bantları · '
         'Fibonacci Seviyeleri · Arz-Talep Bölgeleri · 500+ BIST Hissesi · '
-        '<a href="https://smartmoneyradar.app" style="color:#6366f1;font-weight:800;'
-        'text-decoration:none;">smartmoneyradar.app →</a></span></div>',
+        '<span style="color:#6366f1;font-weight:800;">🔜 smartmoneyradar.app — Çok Yakında</span>'
+        '</span></div>',
         unsafe_allow_html=True
     )
 
@@ -826,8 +828,7 @@ def render_main():
              border:1px solid #a5b4fc;border-radius:10px;">
             <span style="font-size:0.8rem;color:#4338ca;font-weight:600;">
                 💎 500+ BIST Hissesi · AI Analizi · ICT Sniper · Formasyon Tarayıcı · Alarm Sistemi ·
-                <a href="https://smartmoneyradar.app" style="color:#6366f1;text-decoration:none;font-weight:800;">
-                Premium'a Geç →</a>
+                <span style="color:#6366f1;font-weight:800;">🔜 smartmoneyradar.app — Çok Yakında</span>
             </span>
         </div>
     </div>
