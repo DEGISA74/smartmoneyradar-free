@@ -505,50 +505,70 @@ def render_grafikler(df: pd.DataFrame):
 
 
 def render_premium_tablo():
+    # (özellik, ücretsiz, premium, premium'da vurgu rengi)
     rows = [
-        ("BTC & ETH Analizi",           "✅", "✅"),
-        ("Fiyat + STP Grafiği",         "✅", "✅"),
-        ("LONG RADAR Skoru",            "✅", "✅"),
-        ("Canlı Sinyaller",             "✅", "✅"),
-        ("500+ BIST Hissesi",           "❌", "✅"),
-        ("AI Stratejist Yorumu",        "❌", "✅"),
-        ("ICT Mum Grafiği",             "❌", "✅"),
-        ("RSI Uyumsuzluk & SFP Tuzak", "❌", "✅"),
-        ("Harmonik Formasyon Tarayıcı", "❌", "✅"),
-        ("Arz-Talep Bölgeleri",         "❌", "✅"),
-        ("Fibonacci Seviyeleri",        "❌", "✅"),
-        ("VWAP Sapma Analizi",          "❌", "✅"),
-        ("Alarm & Push Bildirimi",      "❌", "✅"),
-        ("Tam Otomatik Tarama",         "❌", "✅"),
+        # ── Veri ──
+        ("BTC & ETH Analizi",                        "✅", "✅", None),
+        ("500+ BIST Hissesi (tam piyasa)",            "❌", "✅", "#10b981"),
+        # ── Tarama Motorları ──
+        ('"7 Onaylı" Kusursuz Algoritma',            "❌", "✅", "#f59e0b"),
+        ("Altın Fırsatlar — Skor > 85 Taraması",     "❌", "✅", "#f59e0b"),
+        ("Platin Formasyonlar Tarayıcısı",            "❌", "✅", "#f59e0b"),
+        ("Her Sabah Hazır Setup Listesi",             "❌", "✅", "#f59e0b"),
+        # ── Formasyon & Price Action ──
+        ("AI Formasyon Tespiti (Fincan, Bayrak…)",   "❌", "✅", "#6366f1"),
+        ("Harmonik Formasyonlar + Pop-up Uyarı",     "❌", "✅", "#6366f1"),
+        ("Detaylı Price Action Paneli",               "❌", "✅", "#6366f1"),
+        ("RSI Uyumsuzluk & SFP Tuzak Sinyali",       "❌", "✅", "#6366f1"),
+        # ── Smart Money / ICT ──
+        ("Smart Money Likidite Alımı Uyarısı",       "❌", "✅", "#06b6d4"),
+        ("Balina İzi & Kurumsal Blok Takibi",        "❌", "✅", "#06b6d4"),
+        ("Tam ICT Paneli (VWAP, OB, FVG…)",          "❌", "✅", "#06b6d4"),
+        ("Arz-Talep Bölgeleri + Fibonacci",           "❌", "✅", "#06b6d4"),
+        # ── AI & Trend ──
+        ("Güçlü Boğa / Trend Şablonu Etiketi",       "❌", "✅", "#8b5cf6"),
+        ("Minervini Stage Analysis",                  "❌", "✅", "#8b5cf6"),
+        ("AI Destekli 25 Yıllık Stratejist Yorumu",  "❌", "✅", "#8b5cf6"),
     ]
 
-    rows_html = "".join(
-        f'<div style="display:flex;justify-content:space-between;align-items:center;'
-        f'padding:5px 8px;border-bottom:1px solid #f1f5f9;'
-        f'background:{"#f9fafb" if i%2==0 else "white"};">'
-        f'<span style="font-size:0.74rem;color:#334155;">{feat}</span>'
-        f'<div style="display:flex;gap:24px;min-width:100px;justify-content:center;">'
-        f'<span style="font-size:0.8rem;">{free}</span>'
-        f'<span style="font-size:0.8rem;">{prem}</span>'
-        f'</div></div>'
-        for i, (feat, free, prem) in enumerate(rows)
-    )
+    rows_html = ""
+    for i, (feat, free, prem, pc) in enumerate(rows):
+        bg = "#f9fafb" if i % 2 == 0 else "white"
+        prem_col = pc if pc else "#10b981"
+        rows_html += (
+            f'<div style="display:flex;justify-content:space-between;align-items:center;'
+            f'padding:5px 8px;border-bottom:1px solid #f1f5f9;background:{bg};">'
+            f'<span style="font-size:0.72rem;color:#334155;">{feat}</span>'
+            f'<div style="display:flex;gap:20px;min-width:90px;justify-content:center;">'
+            f'<span style="font-size:0.82rem;">{free}</span>'
+            f'<span style="font-size:0.82rem;color:{prem_col};font-weight:700;">{prem}</span>'
+            f'</div></div>'
+        )
 
     st.markdown(
         '<div class="smr-card">'
-        '<div class="smr-header" style="color:#6366f1;">📊 Ücretsiz vs Premium</div>'
+        # Başlık + slogan
+        '<div class="smr-header" style="color:#6366f1;">🚀 Ücretsiz mi? Premium mu?</div>'
+        '<div style="font-size:0.73rem;color:#475569;margin-bottom:10px;line-height:1.5;">'
+        'Grafik çizmeye, indikatör kontrol etmeye son. Patron Terminal algoritması '
+        '<b>tüm piyasayı saniyeler içinde tarar</b> — sen sadece kaymağı yersin.'
+        '</div>'
+        # Tablo başlığı
         '<div style="display:flex;justify-content:space-between;align-items:center;'
-        'padding:6px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:2px;">'
-        '<span style="font-size:0.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Özellik</span>'
-        '<div style="display:flex;gap:16px;min-width:100px;justify-content:center;">'
-        '<span style="font-size:0.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Ücretsiz</span>'
-        '<span style="font-size:0.68rem;font-weight:700;color:#6366f1;text-transform:uppercase;">Premium</span>'
+        'padding:5px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:2px;">'
+        '<span style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Özellik</span>'
+        '<div style="display:flex;gap:20px;min-width:90px;justify-content:center;">'
+        '<span style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Ücretsiz</span>'
+        '<span style="font-size:0.65rem;font-weight:700;color:#6366f1;text-transform:uppercase;">Premium</span>'
         '</div></div>'
         + rows_html +
+        # Alt CTA
         '<div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);'
-        'border-radius:8px;padding:10px;margin-top:12px;text-align:center;">'
-        '<div style="font-size:0.8rem;font-weight:800;color:#4338ca;margin-bottom:2px;">💎 Premium</div>'
-        '<div style="font-size:0.72rem;color:#6366f1;font-weight:600;">🔜 smartmoneyradar.app — Çok Yakında</div>'
+        'border-radius:8px;padding:10px 12px;margin-top:12px;text-align:center;">'
+        '<div style="font-size:0.82rem;font-weight:900;color:#4338ca;margin-bottom:3px;">'
+        '💎 Patron Terminal — Profesyonellerin Radarı</div>'
+        '<div style="font-size:0.71rem;color:#6366f1;font-weight:600;">'
+        '🔜 smartmoneyradar.app — Çok Yakında</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
