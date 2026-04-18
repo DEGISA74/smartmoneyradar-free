@@ -504,6 +504,57 @@ def render_grafikler(df: pd.DataFrame):
     )
 
 
+def render_premium_tablo():
+    rows = [
+        ("BTC & ETH Analizi",           "✅", "✅"),
+        ("Fiyat + STP Grafiği",         "✅", "✅"),
+        ("LONG RADAR Skoru",            "✅", "✅"),
+        ("Canlı Sinyaller",             "✅", "✅"),
+        ("500+ BIST Hissesi",           "❌", "✅"),
+        ("AI Stratejist Yorumu",        "❌", "✅"),
+        ("ICT Mum Grafiği",             "❌", "✅"),
+        ("RSI Uyumsuzluk & SFP Tuzak", "❌", "✅"),
+        ("Harmonik Formasyon Tarayıcı", "❌", "✅"),
+        ("Arz-Talep Bölgeleri",         "❌", "✅"),
+        ("Fibonacci Seviyeleri",        "❌", "✅"),
+        ("VWAP Sapma Analizi",          "❌", "✅"),
+        ("Alarm & Push Bildirimi",      "❌", "✅"),
+        ("Tam Otomatik Tarama",         "❌", "✅"),
+    ]
+
+    rows_html = "".join(
+        f'<div style="display:flex;justify-content:space-between;align-items:center;'
+        f'padding:5px 8px;border-bottom:1px solid #f1f5f9;'
+        f'background:{"#f9fafb" if i%2==0 else "white"};">'
+        f'<span style="font-size:0.74rem;color:#334155;">{feat}</span>'
+        f'<div style="display:flex;gap:24px;min-width:100px;justify-content:center;">'
+        f'<span style="font-size:0.8rem;">{free}</span>'
+        f'<span style="font-size:0.8rem;">{prem}</span>'
+        f'</div></div>'
+        for i, (feat, free, prem) in enumerate(rows)
+    )
+
+    st.markdown(
+        '<div class="smr-card">'
+        '<div class="smr-header" style="color:#6366f1;">📊 Ücretsiz vs Premium</div>'
+        '<div style="display:flex;justify-content:space-between;align-items:center;'
+        'padding:6px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:2px;">'
+        '<span style="font-size:0.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Özellik</span>'
+        '<div style="display:flex;gap:16px;min-width:100px;justify-content:center;">'
+        '<span style="font-size:0.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Ücretsiz</span>'
+        '<span style="font-size:0.68rem;font-weight:700;color:#6366f1;text-transform:uppercase;">Premium</span>'
+        '</div></div>'
+        + rows_html +
+        '<div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);'
+        'border-radius:8px;padding:10px;margin-top:12px;text-align:center;">'
+        '<div style="font-size:0.8rem;font-weight:800;color:#4338ca;margin-bottom:2px;">💎 Premium</div>'
+        '<div style="font-size:0.72rem;color:#6366f1;font-weight:600;">🔜 smartmoneyradar.app — Çok Yakında</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
 # ────────────────────────────────────────────────────────────────────
 # UI — GİRİŞ EKRANI
 # ────────────────────────────────────────────────────────────────────
@@ -810,6 +861,7 @@ def render_main():
     with left:
         render_para_akisi(para_data)
         render_teknik_gorunum(gorunum_data)
+        render_premium_tablo()
     with right:
         render_canli_sinyaller(sinyal_data)
         render_yol_haritasi(yol_data)
