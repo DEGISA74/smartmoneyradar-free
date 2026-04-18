@@ -402,6 +402,40 @@ def _card_open(title: str, color: str = "#6366f1") -> str:
 def _card_close() -> str:
     return "</div>"
 
+_SUPA_URL = "https://bzzdviatkawrguwoxqnp.supabase.co"
+_SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6emR2aWF0a2F3cmd1d294cW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjY5MDcsImV4cCI6MjA5MjA0MjkwN30.TdnoZDRruInxCaRWBfE0xz-w2L1bFaiXBDDjQgz2g9c"
+_SUPA_HDR = {"apikey": _SUPA_KEY, "Authorization": f"Bearer {_SUPA_KEY}"}
+
+@st.cache_data(ttl=120)
+def _get_display_count() -> int:
+    """Supabase'deki unique email sayısını al, görsel sayaça çevir."""
+    try:
+        resp = requests.get(
+            f"{_SUPA_URL}/rest/v1/users?select=email",
+            headers=_SUPA_HDR, timeout=5
+        )
+        data = resp.json()
+        unique = len(set(r["email"] for r in data if isinstance(r, dict)))
+    except Exception:
+        unique = 5
+    unique = max(unique, 1)
+    # Katsayı: gerçek sayı arttıkça azalır
+    if unique < 10:   mult = 10
+    elif unique < 30: mult = 9
+    elif unique < 40: mult = 8
+    elif unique < 50: mult = 7
+    elif unique < 70: mult = 6
+    elif unique < 100:mult = 5
+    elif unique < 150:mult = 4
+    elif unique < 200:mult = 3
+    else:             mult = 2
+    displayed = unique * mult
+    # Birler basamağı asla 0 olmasın
+    if displayed % 10 == 0:
+        displayed += (unique * 7 + 3) % 9 + 1
+    return displayed
+
+
 def _locked(*features) -> str:
     """Premium'da kilitli özellik kutusu — çoklu pill'ler"""
     pills = "".join(
@@ -612,20 +646,19 @@ def render_login():
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         if st.button("📡  Ücretsiz Erişim Al", use_container_width=True):
             if name and email and "@" in email:
-                # Supabase'e kaydet
+                # Supabase'e kaydet (duplicate kontrolü ile)
                 try:
-                    import requests as _req
-                    _req.post(
-                        "https://bzzdviatkawrguwoxqnp.supabase.co/rest/v1/users",
-                        headers={
-                            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6emR2aWF0a2F3cmd1d294cW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjY5MDcsImV4cCI6MjA5MjA0MjkwN30.TdnoZDRruInxCaRWBfE0xz-w2L1bFaiXBDDjQgz2g9c",
-                            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6emR2aWF0a2F3cmd1d294cW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjY5MDcsImV4cCI6MjA5MjA0MjkwN30.TdnoZDRruInxCaRWBfE0xz-w2L1bFaiXBDDjQgz2g9c",
-                            "Content-Type": "application/json",
-                            "Prefer": "return=minimal"
-                        },
-                        json={"email": email, "name": name},
-                        timeout=5
+                    chk = requests.get(
+                        f"{_SUPA_URL}/rest/v1/users?email=eq.{email}&select=id",
+                        headers=_SUPA_HDR, timeout=5
                     )
+                    if not chk.json():  # email yoksa ekle
+                        requests.post(
+                            f"{_SUPA_URL}/rest/v1/users",
+                            headers={**_SUPA_HDR, "Content-Type": "application/json", "Prefer": "return=minimal"},
+                            json={"email": email, "name": name},
+                            timeout=5
+                        )
                 except Exception:
                     pass  # Kayıt başarısız olsa bile kullanıcı içeri girsin
                 st.session_state["logged_in"]  = True
@@ -852,6 +885,15 @@ def render_main():
             st.session_state.clear(); st.rerun()
 
     st.markdown("<hr>", unsafe_allow_html=True)
+
+    # Kullanıcı sayacı
+    _cnt = _get_display_count()
+    st.markdown(
+        f'<div style="text-align:right;font-size:0.72rem;color:#94a3b8;margin-top:-8px;margin-bottom:8px;">'
+        f'👥 <b style="color:#6366f1;">{_cnt:,}</b> analist bu terminali kullanıyor'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
     # Kripto seçici
     coins = [
