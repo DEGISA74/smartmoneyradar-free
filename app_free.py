@@ -508,7 +508,7 @@ def render_premium_tablo():
     # (özellik, ücretsiz, premium, premium'da vurgu rengi)
     rows = [
         # ── Veri ──
-        ("BTC & ETH Analizi",                        "✅", "✅", None),
+        ("BTC & ETH Analizi",                        "%10", "%100", None),
         ("500+ BIST Hissesi (tam piyasa)",            "❌", "✅", "#10b981"),
         # ── Tarama Motorları ──
         ('"7 Onaylı" Kusursuz Algoritma',            "❌", "✅", "#f59e0b"),
@@ -558,8 +558,8 @@ def render_premium_tablo():
         'padding:5px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:2px;">'
         '<span style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Özellik</span>'
         '<div style="display:flex;gap:20px;min-width:90px;justify-content:center;">'
-        '<span style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">%10</span>'
-        '<span style="font-size:0.65rem;font-weight:700;color:#6366f1;text-transform:uppercase;">%100</span>'
+        '<span style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Ücretsiz</span>'
+        '<span style="font-size:0.65rem;font-weight:700;color:#6366f1;text-transform:uppercase;">Premium</span>'
         '</div></div>'
         + rows_html +
         # "Ve çok daha fazlası" satırı
