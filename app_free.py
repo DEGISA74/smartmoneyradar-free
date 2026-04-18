@@ -1,6 +1,6 @@
 """
 Smart Money Radar — Ücretsiz Kripto Terminali
-BTC & ETH için kurumsal para akışı analizi
+BTC · ETH · SOL · XRP · DOGE · AVAX için kurumsal para akışı analizi
 Veriler: Binance API (ücretsiz, gerçek zamanlı)
 """
 
@@ -597,7 +597,7 @@ def render_login():
             Smart Money Radar
         </div>
         <div style="font-size:0.88rem;color:#64748b;margin-bottom:8px;">
-            BTC & ETH için kurumsal para akışı analizi
+            BTC · ETH · SOL · XRP · DOGE · AVAX için kurumsal para akışı analizi
         </div>
         <div style="font-size:0.82rem;color:#6366f1;font-weight:600;margin-bottom:32px;">
             Ücretsiz · Kayıt gerektirmez · Anlık veri
