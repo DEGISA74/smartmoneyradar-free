@@ -136,16 +136,22 @@ def _try_coingecko(ticker: str):
 def _try_yfinance(ticker: str):
     try:
         import yfinance as yf
-        df = yf.download(ticker, period="2y", interval="1d",
-                         progress=False, auto_adjust=True)
-        if df is None or len(df) < 50:
+        raw = yf.download(ticker, period="2y", interval="1d",
+                          progress=False, auto_adjust=True)
+        if raw is None or len(raw) < 50:
             return None
-        if df.index.tz is not None:
-            df.index = df.index.tz_localize(None)
-        # yfinance bazen MultiIndex kolon döndürür — düzleştir
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-        return df[["Open","High","Low","Close","Volume"]].dropna()
+        # MultiIndex veya normal — her durumda sütunları tek tek çek
+        result = pd.DataFrame(index=raw.index)
+        for col in ["Open", "High", "Low", "Close", "Volume"]:
+            s = raw[col]
+            # DataFrame ise (MultiIndex) tek kolona indir
+            if isinstance(s, pd.DataFrame):
+                s = s.iloc[:, 0]
+            result[col] = pd.to_numeric(s, errors="coerce")
+        result = result.dropna()
+        if result.index.tz is not None:
+            result.index = result.index.tz_localize(None)
+        return result if len(result) > 50 else None
     except Exception:
         return None
 
