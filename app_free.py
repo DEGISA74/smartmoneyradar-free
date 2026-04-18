@@ -8,7 +8,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
-# yfinance ve coingecko fallback için — lazy import (_try_yfinance içinde)
 
 # ────────────────────────────────────────────────────────────────────
 # SAYFA AYARLARI
@@ -22,44 +21,59 @@ st.set_page_config(
 )
 
 # ────────────────────────────────────────────────────────────────────
-# CSS
+# CSS — LIGHT MODE
 # ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-[data-testid="stAppViewContainer"] { background: #0d1117 !important; }
+[data-testid="stAppViewContainer"] { background: #f8fafc !important; }
 [data-testid="stHeader"]           { background: transparent !important; }
 [data-testid="stSidebar"]          { display: none !important; }
 .block-container { padding: 1rem 2rem !important; max-width: 1200px !important; }
 * { font-family: 'Inter', -apple-system, sans-serif; }
 
 .stButton > button {
-    background: #1e2530 !important; color: #e2e8f0 !important;
-    border: 1px solid #2d3748 !important; border-radius: 8px !important;
+    background: #ffffff !important; color: #334155 !important;
+    border: 1px solid #cbd5e1 !important; border-radius: 8px !important;
     font-weight: 600 !important; transition: all 0.2s !important;
 }
-.stButton > button:hover { border-color: #6366f1 !important; color: #6366f1 !important; }
-
-.stTextInput > div > div > input {
-    background: #1e2530 !important; color: #e2e8f0 !important;
-    border: 1px solid #2d3748 !important; border-radius: 8px !important;
+.stButton > button:hover {
+    border-color: #6366f1 !important; color: #6366f1 !important;
+    background: #f5f3ff !important;
 }
-.stTextInput > label { color: #94a3b8 !important; font-size: 0.82rem !important; }
+.stTextInput > div > div > input {
+    background: #ffffff !important; color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important; border-radius: 8px !important;
+}
+.stTextInput > label { color: #64748b !important; font-size: 0.82rem !important; }
 
 .smr-card {
-    background: #161b22; border: 1px solid #21262d;
+    background: #ffffff; border: 1px solid #e2e8f0;
     border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .smr-header {
     font-size: 0.70rem; font-weight: 700; color: #6366f1;
     text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
 }
-.premium-cta {
-    background: linear-gradient(135deg, #1e1b4b, #1e2530);
-    border: 1px solid #4338ca; border-radius: 8px;
-    padding: 8px 12px; margin-top: 12px;
-    text-align: center; font-size: 0.76rem; color: #a5b4fc;
+.premium-box {
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+    border: 1px solid #a5b4fc; border-radius: 10px;
+    padding: 10px 12px; margin-top: 14px;
 }
-hr { border-color: #21262d !important; margin: 0.8rem 0 !important; }
+.premium-box-title {
+    font-size: 0.67rem; font-weight: 800; color: #4338ca;
+    text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px;
+}
+.lock-pill {
+    display: inline-block; padding: 3px 8px; margin: 2px 2px 2px 0;
+    background: #ede9fe; border: 1px solid #c4b5fd;
+    border-radius: 5px; font-size: 0.67rem; color: #5b21b6; font-weight: 600;
+}
+.premium-link {
+    display: block; text-align: center; margin-top: 8px;
+    font-size: 0.76rem; font-weight: 700; color: #4338ca; text-decoration: none;
+}
+hr { border-color: #e2e8f0 !important; margin: 0.8rem 0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -109,23 +123,18 @@ def _try_coingecko(ticker: str):
     if not coin_id:
         return None
     try:
-        # OHLC (365 gün)
         ohlc_url = (f"https://api.coingecko.com/api/v3/coins/{coin_id}"
                     f"/ohlc?vs_currency=usd&days=365")
         ohlc = requests.get(ohlc_url, timeout=12).json()
-        # Hacim ayrı endpoint'ten
         vol_url  = (f"https://api.coingecko.com/api/v3/coins/{coin_id}"
                     f"/market_chart?vs_currency=usd&days=365&interval=daily")
         vol_data = requests.get(vol_url, timeout=12).json()
-
         odf = pd.DataFrame(ohlc, columns=["ts","Open","High","Low","Close"])
         odf["Date"] = pd.to_datetime(odf["ts"], unit="ms").dt.normalize()
         odf.set_index("Date", inplace=True)
-
         vdf = pd.DataFrame(vol_data["total_volumes"], columns=["ts","Volume"])
         vdf["Date"] = pd.to_datetime(vdf["ts"], unit="ms").dt.normalize()
         vdf.set_index("Date", inplace=True)
-
         df = odf.join(vdf[["Volume"]], how="left")
         df["Volume"] = df["Volume"].fillna(0)
         df = df[["Open","High","Low","Close","Volume"]].dropna(subset=["Close"])
@@ -140,11 +149,9 @@ def _try_yfinance(ticker: str):
                           progress=False, auto_adjust=True)
         if raw is None or len(raw) < 50:
             return None
-        # MultiIndex veya normal — her durumda sütunları tek tek çek
         result = pd.DataFrame(index=raw.index)
         for col in ["Open", "High", "Low", "Close", "Volume"]:
             s = raw[col]
-            # DataFrame ise (MultiIndex) tek kolona indir
             if isinstance(s, pd.DataFrame):
                 s = s.iloc[:, 0]
             result[col] = pd.to_numeric(s, errors="coerce")
@@ -203,25 +210,19 @@ def calc_bb_squeeze(df, bb_p=20, bb_s=2.0, kc_p=20, kc_m=1.5):
 def analyze_long_radar(df):
     try:
         c = df["Close"]; v = df["Volume"]
-
         sma50  = c.rolling(50).mean()
         t_pass = bool(c.iloc[-1] > sma50.iloc[-1]) and bool(sma50.iloc[-1] > sma50.iloc[-6])
-
         obv    = calc_obv(c, v)
         a_pass = bool(obv.iloc[-1] > obv.rolling(20).mean().iloc[-1]) and bool(obv.iloc[-1] > obv.iloc[-10])
-
         sq_pass = calc_bb_squeeze(df)
         if not sq_pass:
             for back in range(2, 6):
                 if len(df) > back + 22 and calc_bb_squeeze(df.iloc[:-back]):
                     sq_pass = True; break
-
         avg_v  = float(v.rolling(20).mean().iloc[-1])
         v_pass = bool(v.iloc[-1] > avg_v * 1.5) and bool(c.iloc[-1] > float(c.rolling(20).max().iloc[-2]))
-
         rsi    = calc_rsi(c)
         m_pass = bool(rsi.iloc[-1] > 50) and bool(rsi.iloc[-1] > rsi.iloc[-5])
-
         criteria = {
             "Trend Zemini":      (t_pass,  25),
             "Birikim (OBV)":     (a_pass,  20),
@@ -232,16 +233,14 @@ def analyze_long_radar(df):
         score     = sum(w for _, (p, w) in criteria.items() if p)
         passed    = sum(1 for _, (p, _) in criteria.items() if p)
         pre_launch = (passed >= 4 and not v_pass)
-
-        if score >= 85:   status, sc = "🔥 Harekete Geç",      "#f59e0b"
-        elif score >= 65: status, sc = "⚡ LONG İÇİN HAZIR",   "#10b981"
-        elif pre_launch:  status, sc = "🎯 FİTİL ÇEKİLİYOR",  "#06b6d4"
-        elif score >= 40: status, sc = "📊 İzleme Listesi",    "#94a3b8"
-        else:             status, sc = "⛔ Henüz Değil",        "#ef4444"
-
+        if score >= 85:   status, sc = "🔥 Harekete Geç",     "#f59e0b"
+        elif score >= 65: status, sc = "⚡ LONG İÇİN HAZIR",  "#10b981"
+        elif pre_launch:  status, sc = "🎯 FİTİL ÇEKİLİYOR", "#06b6d4"
+        elif score >= 40: status, sc = "📊 İzleme Listesi",   "#64748b"
+        else:             status, sc = "⛔ Henüz Değil",       "#ef4444"
         return {"score": score, "status": status, "status_col": sc, "criteria": criteria}
     except:
-        return {"score": 0, "status": "Hesaplanamadı", "status_col": "#94a3b8", "criteria": {}}
+        return {"score": 0, "status": "Hesaplanamadı", "status_col": "#64748b", "criteria": {}}
 
 
 def analyze_para_akisi(df):
@@ -251,23 +250,19 @@ def analyze_para_akisi(df):
         fi_val  = float(fi.iloc[-1]); fi_prev = float(fi.iloc[-6])
         fi_max  = float(fi.abs().rolling(50).max().iloc[-1]) or 1
         fi_norm = fi_val / fi_max
-
-        if fi_val > 0 and fi_val > fi_prev:   fi_s, fi_c = "Güçlenen Alım Baskısı",      "#10b981"
-        elif fi_val > 0:                       fi_s, fi_c = "Alım Baskısı (zayıflıyor)",  "#34d399"
-        elif fi_val < 0 and fi_val < fi_prev:  fi_s, fi_c = "Güçlenen Satış Baskısı",     "#ef4444"
-        else:                                  fi_s, fi_c = "Satış Baskısı (azalıyor)",   "#f87171"
-
+        if fi_val > 0 and fi_val > fi_prev:   fi_s, fi_c = "Güçlenen Alım Baskısı",     "#10b981"
+        elif fi_val > 0:                       fi_s, fi_c = "Alım Baskısı (zayıflıyor)", "#16a34a"
+        elif fi_val < 0 and fi_val < fi_prev:  fi_s, fi_c = "Güçlenen Satış Baskısı",    "#ef4444"
+        else:                                  fi_s, fi_c = "Satış Baskısı (azalıyor)",  "#dc2626"
         h50 = float(df["High"].rolling(50).max().iloc[-1])
         l50 = float(df["Low"].rolling(50).min().iloc[-1])
         stp = (h50 + l50) / 2; cur = float(c.iloc[-1])
         sap = ((cur - stp) / stp) * 100
-
         if sap > 15:    stp_s, stp_c = "Dengenin çok üzerinde — Isınma var", "#ef4444"
         elif sap > 5:   stp_s, stp_c = "Dengenin üzerinde",                  "#f59e0b"
-        elif sap > -5:  stp_s, stp_c = "Denge yakınında",                    "#94a3b8"
-        elif sap > -15: stp_s, stp_c = "Dengenin altında",                   "#34d399"
+        elif sap > -5:  stp_s, stp_c = "Denge yakınında",                    "#64748b"
+        elif sap > -15: stp_s, stp_c = "Dengenin altında",                   "#10b981"
         else:           stp_s, stp_c = "Derin iskonto bölgesi",              "#06b6d4"
-
         return {"fi_val": fi_val, "fi_norm": fi_norm, "fi_status": fi_s, "fi_col": fi_c,
                 "stp": stp, "current": cur, "sapma": sap, "stp_status": stp_s, "stp_col": stp_c}
     except:
@@ -284,20 +279,16 @@ def analyze_teknik_gorunum(df):
         ema20  = float(c.ewm(span=20, adjust=False).mean().iloc[-1])
         sma50  = float(c.rolling(50).mean().iloc[-1])
         sma200 = float(c.rolling(200).mean().iloc[-1])
-
         rows = []
-        if rsi_v > 70:   rows.append(("RSI (14)", f"{rsi_v:.1f}", "Aşırı Alım — dikkat",  "#f59e0b"))
-        elif rsi_v > 55: rows.append(("RSI (14)", f"{rsi_v:.1f}", "Güçlü Momentum",        "#10b981"))
-        elif rsi_v > 45: rows.append(("RSI (14)", f"{rsi_v:.1f}", "Nötr",                  "#94a3b8"))
-        else:            rows.append(("RSI (14)", f"{rsi_v:.1f}", "Zayıf / Aşırı Satım",  "#ef4444"))
-
+        if rsi_v > 70:   rows.append(("RSI (14)", f"{rsi_v:.1f}", "Aşırı Alım — dikkat", "#f59e0b"))
+        elif rsi_v > 55: rows.append(("RSI (14)", f"{rsi_v:.1f}", "Güçlü Momentum",       "#10b981"))
+        elif rsi_v > 45: rows.append(("RSI (14)", f"{rsi_v:.1f}", "Nötr",                 "#64748b"))
+        else:            rows.append(("RSI (14)", f"{rsi_v:.1f}", "Zayıf / Aşırı Satım", "#ef4444"))
         macd_bull = float(macd.iloc[-1]) > float(sig.iloc[-1])
         rows.append(("MACD", "", "Pozitif — Yükselen Baskı" if macd_bull else "Negatif — Düşen Baskı",
                      "#10b981" if macd_bull else "#ef4444"))
-
         rows.append(("OBV Trendi", "", "Yükseliyor ↑" if obv_up else "Düşüyor ↓",
                      "#10b981" if obv_up else "#ef4444"))
-
         for label, lvl in [("EMA20", ema20), ("SMA50", sma50), ("SMA200", sma200)]:
             above = cur > lvl
             rows.append((label, f"{lvl:,.2f}", "Fiyat Üstünde ✓" if above else "Fiyat Altında ✗",
@@ -329,39 +320,33 @@ def analyze_canli_sinyaller(df):
     try:
         c = df["Close"]; v = df["Volume"]
         sinyaller = []
-
         avg_v = float(v.rolling(20).mean().iloc[-1]); son_v = float(v.iloc[-1])
         if son_v > avg_v * 1.5:
             sinyaller.append(("🔥", f"Hacim Artışı: Ortalamanın {son_v/avg_v:.1f}x üzerinde", "#f59e0b"))
-
         rsi_v = float(calc_rsi(c).iloc[-1])
         if rsi_v < 35:
             sinyaller.append(("🟢", f"RSI Aşırı Satım ({rsi_v:.1f}) — Dönüş ihtimali arttı", "#10b981"))
         elif rsi_v > 72:
             sinyaller.append(("🔴", f"RSI Aşırı Alım ({rsi_v:.1f}) — Dikkat gerekiyor", "#ef4444"))
-
         macd, sig = calc_macd(c)
         if float(macd.iloc[-1]) > float(sig.iloc[-1]) and float(macd.iloc[-2]) < float(sig.iloc[-2]):
             sinyaller.append(("⚡", "MACD Yükselen Kesişim — Momentum dönüyor",  "#10b981"))
         elif float(macd.iloc[-1]) < float(sig.iloc[-1]) and float(macd.iloc[-2]) > float(sig.iloc[-2]):
             sinyaller.append(("⚠️", "MACD Düşen Kesişim — Momentum zayıflıyor", "#ef4444"))
-
         obv   = calc_obv(c, v)
         p_up  = bool(c.iloc[-1] > c.iloc[-10]); o_up = bool(obv.iloc[-1] > obv.iloc[-10])
         if p_up and not o_up:
             sinyaller.append(("👀", "Fiyat yükseliyor ama OBV düşüyor — Gizli dağıtım olabilir", "#f59e0b"))
         elif not p_up and o_up:
             sinyaller.append(("🐳", "Fiyat düşerken OBV yükseliyor — Sessiz birikim sinyali", "#06b6d4"))
-
         sma200 = c.rolling(200).mean()
         if float(c.iloc[-1]) > float(sma200.iloc[-1]) and float(c.iloc[-5]) < float(sma200.iloc[-5]):
             sinyaller.append(("🚀", "SMA200 yukarı kırıldı — Güçlü yapısal sinyal", "#10b981"))
-
         if not sinyaller:
-            sinyaller.append(("📊", "Belirgin aktif sinyal yok — Veri izleniyor", "#94a3b8"))
+            sinyaller.append(("📊", "Belirgin aktif sinyal yok — Veri izleniyor", "#64748b"))
         return sinyaller
     except:
-        return [("📊", "Hesaplanamadı", "#94a3b8")]
+        return [("📊", "Hesaplanamadı", "#64748b")]
 
 
 def analyze_yol_haritasi(df):
@@ -370,18 +355,15 @@ def analyze_yol_haritasi(df):
         s50 = c.rolling(50).mean(); s200 = c.rolling(200).mean()
         a50 = cur > float(s50.iloc[-1]); s50r = float(s50.iloc[-1]) > float(s50.iloc[-6])
         a200 = cur > float(s200.iloc[-1])
-
-        if a50 and s50r and a200:    bias, bc, bi = "Boğa",          "#10b981", "🐂"
-        elif a50 and a200:           bias, bc, bi = "Temkinli Boğa", "#34d399", "📈"
-        elif not a50 and not a200:   bias, bc, bi = "Ayı",           "#ef4444", "🐻"
-        else:                        bias, bc, bi = "Nötr",          "#94a3b8", "⚖️"
-
+        if a50 and s50r and a200:  bias, bc, bi = "Boğa",          "#10b981", "🐂"
+        elif a50 and a200:         bias, bc, bi = "Temkinli Boğa", "#16a34a", "📈"
+        elif not a50 and not a200: bias, bc, bi = "Ayı",           "#ef4444", "🐻"
+        else:                      bias, bc, bi = "Nötr",          "#64748b", "⚖️"
         h50 = float(df["High"].rolling(50).max().iloc[-1])
         l50 = float(df["Low"].rolling(50).min().iloc[-1])
         mid = (h50 + l50) / 2
         if cur < mid: zone, zc, zi = "Discount (Ucuz Bölge)",  "#10b981", "💚"
         else:         zone, zc, zi = "Premium (Pahalı Bölge)", "#f59e0b", "🟡"
-
         if "Boğa" in bias and "Discount" in zone:
             sen = "Trend yukarı, fiyat ucuz bölgede. Kurumsal alım için elverişli koşullar. Tetikleyici sinyal bekleniyor."
         elif "Boğa" in bias:
@@ -390,11 +372,35 @@ def analyze_yol_haritasi(df):
             sen = "Trend aşağı, fiyat ucuz görünüyor. Ancak 'ucuz' daha ucuz olabilir. Trend dönüş sinyali olmadan risk yüksek."
         else:
             sen = "Trend aşağı ve fiyat pahalı bölgede. Yeni pozisyon için uygun koşullar henüz oluşmadı."
-
         return {"bias": bias, "bias_col": bc, "bias_icon": bi,
                 "zone": zone, "zone_col": zc, "zone_icon": zi, "senaryo": sen}
     except:
         return None
+
+
+# ────────────────────────────────────────────────────────────────────
+# UI YARDIMCILARI
+# ────────────────────────────────────────────────────────────────────
+def _card_open(title: str, color: str = "#6366f1") -> str:
+    return (f'<div class="smr-card">'
+            f'<div class="smr-header" style="color:{color};">{title}</div>')
+
+def _card_close() -> str:
+    return "</div>"
+
+def _locked(*features) -> str:
+    """Premium'da kilitli özellik kutusu — çoklu pill'ler"""
+    pills = "".join(
+        f'<span class="lock-pill">🔒 {f}</span>' for f in features
+    )
+    return (
+        '<div class="premium-box">'
+        '<div class="premium-box-title">💎 Premium\'da Açık</div>'
+        f'{pills}'
+        '<a class="premium-link" href="https://smartmoneyradar.app" target="_blank">'
+        'Tüm özelliklere eriş → smartmoneyradar.app</a>'
+        '</div>'
+    )
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -404,7 +410,7 @@ def render_login():
     st.markdown("""
     <div style="max-width:460px;margin:80px auto 0;text-align:center;">
         <div style="font-size:2.8rem;margin-bottom:8px;">📡</div>
-        <div style="font-size:1.7rem;font-weight:800;color:#e2e8f0;margin-bottom:6px;">
+        <div style="font-size:1.7rem;font-weight:800;color:#1e293b;margin-bottom:6px;">
             Smart Money Radar
         </div>
         <div style="font-size:0.88rem;color:#64748b;margin-bottom:8px;">
@@ -421,7 +427,6 @@ def render_login():
         name  = st.text_input("Adın", placeholder="Adın Soyadın")
         email = st.text_input("E-posta", placeholder="ornek@mail.com")
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-
         if st.button("📡  Ücretsiz Erişim Al", use_container_width=True):
             if name and email and "@" in email:
                 st.session_state["logged_in"]  = True
@@ -430,12 +435,11 @@ def render_login():
                 st.rerun()
             else:
                 st.error("Lütfen adınızı ve geçerli bir e-posta adresi girin.")
-
         st.markdown("""
-        <div style="margin-top:20px;text-align:center;font-size:0.73rem;color:#475569;line-height:1.7;">
+        <div style="margin-top:20px;text-align:center;font-size:0.73rem;color:#94a3b8;line-height:1.7;">
             Spam yok. İstediğiniz zaman çıkabilirsiniz.<br>
             <span style="color:#6366f1;font-weight:600;">Premium →</span>
-            <span style="color:#64748b;">Tüm BIST hisseleri + AI analizi + Gelişmiş tarama</span>
+            <span style="color:#94a3b8;"> Tüm BIST hisseleri + AI analizi + Gelişmiş tarama</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -443,39 +447,36 @@ def render_login():
 # ────────────────────────────────────────────────────────────────────
 # UI — PANEL RENDER FONKSİYONLARI
 # ────────────────────────────────────────────────────────────────────
-def _card_open(title: str, color: str = "#6366f1") -> str:
-    return (f'<div class="smr-card">'
-            f'<div class="smr-header" style="color:{color};">{title}</div>')
-
-def _card_close() -> str:
-    return "</div>"
-
-def _cta(txt: str) -> str:
-    return f'<div class="premium-cta">💎 {txt} → <b>Premium\'da</b></div>'
-
-
 def render_long_radar(data: dict):
     score = data["score"]; status = data["status"]; sc = data["status_col"]
     bar_col = "#10b981" if score >= 75 else ("#f59e0b" if score >= 50 else "#ef4444")
 
     rows = ""
     for name, (passed, weight) in data["criteria"].items():
-        c = "#e2e8f0" if passed else "#475569"
-        rows += (f'<div style="display:flex;justify-content:space-between;padding:5px 0;'
-                 f'border-bottom:1px solid #21262d;">'
-                 f'<span style="font-size:0.77rem;color:{c};">{"✅" if passed else "⬜"} {name}</span>'
-                 f'<span style="font-size:0.72rem;color:#64748b;">{weight}p</span></div>')
+        c = "#1e293b" if passed else "#94a3b8"
+        rows += (
+            f'<div style="display:flex;justify-content:space-between;padding:6px 0;'
+            f'border-bottom:1px solid #f1f5f9;">'
+            f'<span style="font-size:0.77rem;color:{c};">{"✅" if passed else "⬜"} {name}</span>'
+            f'<span style="font-size:0.72rem;color:#94a3b8;">{weight}p</span></div>'
+        )
 
     st.markdown(
         _card_open("🎯 LONG RADAR — Akıllı Para Hazırlık Skoru", "#6366f1")
         + f'<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">'
           f'<span style="font-size:3rem;font-weight:800;color:{sc};">{score}</span>'
-          f'<span style="font-size:0.9rem;color:#64748b;">/100</span>'
+          f'<span style="font-size:0.9rem;color:#94a3b8;">/100</span>'
           f'<span style="font-size:0.88rem;font-weight:700;color:{sc};margin-left:8px;">{status}</span></div>'
-        + f'<div style="background:#21262d;border-radius:4px;height:6px;margin-bottom:14px;">'
+        + f'<div style="background:#f1f5f9;border-radius:4px;height:6px;margin-bottom:14px;">'
           f'<div style="background:{bar_col};width:{score}%;height:6px;border-radius:4px;"></div></div>'
         + rows
-        + _cta("Tüm BIST hisseleri için LONG RADAR")
+        + _locked(
+            "500+ BIST Hissesi Taraması",
+            "ICT Bottomline Skoru",
+            "Haftalık + Aylık LONG RADAR",
+            "Tam Otomatik Alarm",
+            "Minervini Stage Analysis",
+        )
         + _card_close(),
         unsafe_allow_html=True
     )
@@ -491,19 +492,24 @@ def render_para_akisi(data):
     st.markdown(
         _card_open("💰 PARA AKIŞ İVMESİ & FİYAT DENGESİ", "#06b6d4")
         + f'<div style="margin-bottom:14px;">'
-          f'<div style="font-size:0.68rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Para Akış İvmesi (Force Index)</div>'
+          f'<div style="font-size:0.68rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Para Akış İvmesi (Force Index)</div>'
           f'<div style="font-size:1.05rem;font-weight:700;color:{data["fi_col"]};">{data["fi_status"]}</div>'
-          f'<div style="background:#21262d;border-radius:4px;height:5px;margin-top:6px;">'
+          f'<div style="background:#f1f5f9;border-radius:4px;height:5px;margin-top:6px;">'
           f'<div style="background:{data["fi_col"]};width:{fi_pct}%;height:5px;border-radius:4px;"></div></div></div>'
         + f'<div style="margin-bottom:8px;">'
-          f'<div style="font-size:0.68rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Fiyat Dengesi (STP Seviyesi)</div>'
+          f'<div style="font-size:0.68rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Fiyat Dengesi (STP Seviyesi)</div>'
           f'<div style="display:flex;justify-content:space-between;align-items:center;">'
           f'<div style="font-size:1.05rem;font-weight:700;color:{data["stp_col"]};">{data["stp_status"]}</div>'
           f'<div style="text-align:right;">'
-          f'<div style="font-size:0.73rem;color:#64748b;">Denge: <b style="color:#e2e8f0;">{data["stp"]:,.2f}</b></div>'
-          f'<div style="font-size:0.73rem;color:#64748b;">Sapma: <b style="color:{data["stp_col"]};">%{data["sapma"]:+.1f}</b></div>'
+          f'<div style="font-size:0.73rem;color:#94a3b8;">Denge: <b style="color:#1e293b;">{data["stp"]:,.2f}</b></div>'
+          f'<div style="font-size:0.73rem;color:#94a3b8;">Sapma: <b style="color:{data["stp_col"]};">%{data["sapma"]:+.1f}</b></div>'
           f'</div></div></div>'
-        + _cta("ICT Sniper + Harmonik Formasyonlar")
+        + _locked(
+            "Para Akışı Momentum Grafiği",
+            "Smart Money Flow Göstergesi",
+            "Kurumsal Blok İzleme",
+            "Elder Ray + Force Index Detay",
+        )
         + _card_close(),
         unsafe_allow_html=True
     )
@@ -517,15 +523,21 @@ def render_teknik_gorunum(rows: list):
 
     rows_html = "".join(
         f'<div style="display:flex;justify-content:space-between;align-items:center;'
-        f'padding:6px 0;border-bottom:1px solid #21262d;">'
-        f'<span style="font-size:0.77rem;color:#94a3b8;">{lbl}{(" — " + val) if val else ""}</span>'
+        f'padding:6px 0;border-bottom:1px solid #f1f5f9;">'
+        f'<span style="font-size:0.77rem;color:#64748b;">{lbl}{(" — " + val) if val else ""}</span>'
         f'<span style="font-size:0.77rem;font-weight:600;color:{col};">{txt}</span></div>'
         for lbl, val, txt, col in rows
     )
     st.markdown(
         _card_open("📊 TEKNİK GÖRÜNÜM", "#8b5cf6")
         + rows_html
-        + _cta("HARSI + SuperTrend + Minervini")
+        + _locked(
+            "Teknik Skor Kartı (A–F)",
+            "ICT Odaklı Mum Grafiği",
+            "SuperTrend + HARSI",
+            "Minervini Kriterleri",
+            "Bollinger + ATR Detay",
+        )
         + _card_close(),
         unsafe_allow_html=True
     )
@@ -539,16 +551,16 @@ def render_teknik_seviyeler(data):
 
     cur = data["current"]
     fiyat_html = (
-        f'<div style="background:#1e2530;border:1px solid #6366f1;border-radius:8px;'
+        f'<div style="background:#f5f3ff;border:1px solid #a5b4fc;border-radius:8px;'
         f'padding:7px 12px;margin-bottom:10px;display:flex;justify-content:space-between;">'
-        f'<span style="font-size:0.76rem;color:#94a3b8;">📍 GÜNCEL FİYAT</span>'
+        f'<span style="font-size:0.76rem;color:#64748b;">📍 GÜNCEL FİYAT</span>'
         f'<span style="font-size:0.88rem;font-weight:700;color:#6366f1;">${cur:,.2f}</span></div>'
     )
     rows_html = "".join(
         f'<div style="display:flex;justify-content:space-between;align-items:center;'
-        f'padding:5px 6px;border-bottom:1px solid #21262d;">'
-        f'<span style="font-size:0.75rem;color:#94a3b8;">{lbl}</span>'
-        f'<div><span style="font-size:0.8rem;font-weight:600;color:#e2e8f0;">${lvl:,.2f}</span>'
+        f'padding:5px 6px;border-bottom:1px solid #f1f5f9;">'
+        f'<span style="font-size:0.75rem;color:#64748b;">{lbl}</span>'
+        f'<div><span style="font-size:0.8rem;font-weight:600;color:#1e293b;">${lvl:,.2f}</span>'
         f'<span style="font-size:0.68rem;color:{"#10b981" if cur > lvl else "#ef4444"};margin-left:6px;">'
         f'{"▲" if cur > lvl else "▼"}</span></div></div>'
         for lbl, lvl in sorted(data["levels"].items(), key=lambda x: x[1], reverse=True)
@@ -556,7 +568,13 @@ def render_teknik_seviyeler(data):
     st.markdown(
         _card_open("📐 TEKNİK SEVİYELER", "#f59e0b")
         + fiyat_html + rows_html
-        + _cta("Fibonacci + Arz-Talep Bölgeleri")
+        + _locked(
+            "Fibonacci Seviyeleri",
+            "Arz-Talep Bölgeleri",
+            "ICT Likidite Havuzları",
+            "Günlük Pivot Noktaları",
+            "Yearly Open / Quarterly Level",
+        )
         + _card_close(),
         unsafe_allow_html=True
     )
@@ -564,7 +582,7 @@ def render_teknik_seviyeler(data):
 
 def render_canli_sinyaller(sinyaller: list):
     rows_html = "".join(
-        f'<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid #21262d;">'
+        f'<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid #f1f5f9;">'
         f'<span style="font-size:0.95rem;flex-shrink:0;">{icon}</span>'
         f'<span style="font-size:0.77rem;color:{col};line-height:1.4;">{txt}</span></div>'
         for icon, txt, col in sinyaller
@@ -572,7 +590,13 @@ def render_canli_sinyaller(sinyaller: list):
     st.markdown(
         _card_open("⚡ CANLI SİNYALLER", "#06b6d4")
         + rows_html
-        + _cta("RSI Uyumsuzluk + SFP Tuzak + Harmonik")
+        + _locked(
+            "RSI Uyumsuzluk (Divergence)",
+            "SFP Tuzak Sinyali",
+            "Harmonik Formasyon Alarmı",
+            "AI Sinyal Açıklaması",
+            "Push Bildirimi",
+        )
         + _card_close(),
         unsafe_allow_html=True
     )
@@ -587,17 +611,23 @@ def render_yol_haritasi(data):
     st.markdown(
         _card_open("🗺️ TEKNİK YOL HARİTASI", "#10b981")
         + f'<div style="display:flex;gap:12px;margin-bottom:14px;">'
-          f'<div style="flex:1;background:#1e2530;border:1px solid {data["bias_col"]}40;border-radius:8px;padding:10px;text-align:center;">'
+          f'<div style="flex:1;background:#f8fafc;border:1px solid {data["bias_col"]}60;border-radius:8px;padding:10px;text-align:center;">'
           f'<div style="font-size:1.3rem;">{data["bias_icon"]}</div>'
-          f'<div style="font-size:0.62rem;color:#64748b;text-transform:uppercase;margin:2px 0;">Makro Yön</div>'
+          f'<div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;margin:2px 0;">Makro Yön</div>'
           f'<div style="font-size:0.85rem;font-weight:700;color:{data["bias_col"]};">{data["bias"]}</div></div>'
-          f'<div style="flex:1;background:#1e2530;border:1px solid {data["zone_col"]}40;border-radius:8px;padding:10px;text-align:center;">'
+          f'<div style="flex:1;background:#f8fafc;border:1px solid {data["zone_col"]}60;border-radius:8px;padding:10px;text-align:center;">'
           f'<div style="font-size:1.3rem;">{data["zone_icon"]}</div>'
-          f'<div style="font-size:0.62rem;color:#64748b;text-transform:uppercase;margin:2px 0;">Konum</div>'
+          f'<div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;margin:2px 0;">Konum</div>'
           f'<div style="font-size:0.8rem;font-weight:700;color:{data["zone_col"]};">{data["zone"]}</div></div></div>'
-        + f'<div style="background:#161b22;border-left:3px solid {data["bias_col"]};padding:8px 12px;border-radius:0 6px 6px 0;">'
-          f'<div style="font-size:0.76rem;color:#94a3b8;line-height:1.5;">{data["senaryo"]}</div></div>'
-        + _cta("AI Destekli 25 Yıllık Stratejist Analizi")
+        + f'<div style="background:#f8fafc;border-left:3px solid {data["bias_col"]};padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:4px;">'
+          f'<div style="font-size:0.76rem;color:#475569;line-height:1.5;">{data["senaryo"]}</div></div>'
+        + _locked(
+            "ICT Odaklı Mum Grafiği (interaktif)",
+            "VWAP Sapma Analizi",
+            "AI Destekli Stratejist Yorumu",
+            "Risk / Ödül Hesaplayıcı",
+            "Senaryo Bazlı Fiyat Hedefleri",
+        )
         + _card_close(),
         unsafe_allow_html=True
     )
@@ -614,8 +644,8 @@ def render_main():
     h1, _, h3 = st.columns([4, 2, 1])
     with h1:
         st.markdown(
-            f'<div style="font-size:1.25rem;font-weight:800;color:#e2e8f0;">📡 Smart Money Radar</div>'
-            f'<div style="font-size:0.72rem;color:#64748b;">Hoş geldin, {name} · Kurumsal para takip terminali</div>',
+            f'<div style="font-size:1.25rem;font-weight:800;color:#1e293b;">📡 Smart Money Radar</div>'
+            f'<div style="font-size:0.72rem;color:#94a3b8;">Hoş geldin, {name} · Kurumsal para takip terminali</div>',
             unsafe_allow_html=True
         )
     with h3:
@@ -634,7 +664,7 @@ def render_main():
             st.session_state["ticker"] = "ETH-USD"; st.rerun()
 
     # Veri çek
-    with st.spinner(f"{ticker} verisi Binance'den alınıyor..."):
+    with st.spinner(f"{ticker} verisi alınıyor..."):
         df = get_data(ticker)
 
     if df is None or len(df) < 50:
@@ -651,10 +681,10 @@ def render_main():
 
     st.markdown(
         f'<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin:12px 0 20px;">'
-        f'<span style="font-size:1.6rem;font-weight:800;color:#e2e8f0;">{coin_icon} {coin_name}</span>'
-        f'<span style="font-size:1.6rem;font-weight:700;color:#e2e8f0;">${cur:,.2f}</span>'
+        f'<span style="font-size:1.6rem;font-weight:800;color:#1e293b;">{coin_icon} {coin_name}</span>'
+        f'<span style="font-size:1.6rem;font-weight:700;color:#1e293b;">${cur:,.2f}</span>'
         f'<span style="font-size:0.95rem;font-weight:600;color:{chg_col};">{chg_icon} %{abs(change):.2f}</span>'
-        f'<span style="font-size:0.7rem;color:#475569;margin-left:2px;">· Binance · Günlük kapanış</span>'
+        f'<span style="font-size:0.7rem;color:#94a3b8;margin-left:2px;">· Günlük kapanış</span>'
         f'</div>',
         unsafe_allow_html=True
     )
@@ -682,17 +712,17 @@ def render_main():
     st.markdown("""
     <hr>
     <div style="text-align:center;padding:14px 0;">
-        <div style="font-size:0.75rem;color:#475569;margin-bottom:10px;">
+        <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:10px;">
             Yatırım tavsiyesi değildir. Veriler Binance API üzerinden alınmaktadır.<br>
             <a href="https://twitter.com/SMRadar_2026" style="color:#6366f1;text-decoration:none;font-weight:600;">@SMRadar_2026</a>
         </div>
-        <div style="display:inline-block;padding:10px 24px;
-             background:linear-gradient(135deg,#1e1b4b,#1e2530);
-             border:1px solid #4338ca;border-radius:8px;">
-            <span style="font-size:0.8rem;color:#a5b4fc;">
-                💎 Tüm BIST hisseleri · AI analizi · ICT Sniper · Formasyon tarayıcı ·
-                <b><a href="https://smartmoneyradar.app" style="color:#818cf8;text-decoration:none;">
-                Premium\'a geç →</a></b>
+        <div style="display:inline-block;padding:10px 28px;
+             background:linear-gradient(135deg,#f5f3ff,#ede9fe);
+             border:1px solid #a5b4fc;border-radius:10px;">
+            <span style="font-size:0.8rem;color:#4338ca;font-weight:600;">
+                💎 500+ BIST Hissesi · AI Analizi · ICT Sniper · Formasyon Tarayıcı · Alarm Sistemi ·
+                <a href="https://smartmoneyradar.app" style="color:#6366f1;text-decoration:none;font-weight:800;">
+                Premium'a Geç →</a>
             </span>
         </div>
     </div>
